@@ -43,6 +43,37 @@ async function runMigrations() {
   } catch (err) {
     console.warn('Soft-delete migration skipped (run as table owner to apply):', err.message);
   }
+  // SHA/DHA compliance: beneficiary identifiers + consent records.
+  // See database/migration_sha_dha_compliance.sql for the standalone version.
+  // These run as two independent steps: the ALTER TABLEs need ownership of
+  // `patients` (may not be available to the app's DB user — see soft-delete
+  // note above), but consent_records only needs CREATE on the schema, which
+  // the app user does have. Bundling them in one try/catch would let an
+  // ALTER failure silently skip the unrelated, otherwise-successful CREATE
+  // TABLE — which is exactly what happened here before this fix.
+  try {
+    await pool.query(`ALTER TABLE patients ADD COLUMN IF NOT EXISTS national_id VARCHAR(20)`);
+    await pool.query(`ALTER TABLE patients ADD COLUMN IF NOT EXISTS sha_number   VARCHAR(30)`);
+    await pool.query(`CREATE INDEX IF NOT EXISTS idx_patients_sha_number ON patients(sha_number) WHERE sha_number IS NOT NULL`);
+  } catch (err) {
+    console.warn('SHA/DHA beneficiary-identifier migration skipped (run as table owner to apply):', err.message);
+  }
+  try {
+    await pool.query(`
+      CREATE TABLE IF NOT EXISTS consent_records (
+        id            SERIAL PRIMARY KEY,
+        patient_id    INT NOT NULL REFERENCES patients(patient_id) ON DELETE CASCADE,
+        consent_type  VARCHAR(50) NOT NULL,
+        version       VARCHAR(20) NOT NULL DEFAULT '1.0',
+        recorded_by   INT REFERENCES users(user_id) ON DELETE SET NULL,
+        created_at    TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        withdrawn_at  TIMESTAMP
+      )
+    `);
+    await pool.query(`CREATE INDEX IF NOT EXISTS idx_consent_records_patient_id ON consent_records(patient_id)`);
+  } catch (err) {
+    console.warn('Consent-records migration skipped:', err.message);
+  }
   console.log('Migrations complete');
 }
 

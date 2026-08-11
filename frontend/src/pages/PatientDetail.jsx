@@ -1,10 +1,12 @@
 import { useEffect, useState } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
-import { getPatient, updatePatient, deletePatient } from '../api/patients'
+import { getPatient, updatePatient, deletePatient, exportPatientData } from '../api/patients'
 import { getAppointments } from '../api/appointments'
 import { getMedicalRecords } from '../api/medicalRecords'
 import { useAuth } from '../contexts/AuthContext'
 import Modal from '../components/common/Modal'
+import ConsentPanel from '../components/ConsentPanel'
+import { downloadJSON } from '../utils/download'
 
 const BLOOD_TYPES = ['A+', 'A-', 'B+', 'B-', 'AB+', 'AB-', 'O+', 'O-']
 const GENDERS     = ['Male', 'Female', 'Other']
@@ -30,6 +32,9 @@ export default function PatientDetail() {
   const staffRoles = ['admin', 'receptionist', 'doctor', 'nurse']
   const canViewAppointments = staffRoles.includes(user?.role)
   const canViewRecords      = staffRoles.includes(user?.role)
+  const canCreateConsent    = ['admin', 'receptionist', 'doctor'].includes(user?.role)
+  const canWithdrawConsent  = ['admin', 'receptionist'].includes(user?.role)
+  const canExport           = user?.role === 'admin'
 
   const [patient, setPatient]         = useState(null)
   const [appointments, setAppts]      = useState([])
@@ -48,6 +53,22 @@ export default function PatientDetail() {
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false)
   const [deleting, setDeleting]                   = useState(false)
   const [deleteError, setDeleteError]             = useState('')
+
+  const [exporting, setExporting] = useState(false)
+  const [exportError, setExportError] = useState('')
+
+  async function handleExport() {
+    setExporting(true)
+    setExportError('')
+    try {
+      const res = await exportPatientData(id)
+      downloadJSON(res.data, `patient-${id}-data-export-${res.data.generated_at.slice(0, 10)}.json`)
+    } catch (err) {
+      setExportError(err.response?.data?.message ?? 'Failed to export patient data.')
+    } finally {
+      setExporting(false)
+    }
+  }
 
   async function handleDelete() {
     setDeleting(true)
@@ -87,6 +108,8 @@ export default function PatientDetail() {
       contact_number: patient.contact_number ?? '',
       email:          patient.email          ?? '',
       address:        patient.address        ?? '',
+      national_id:    patient.national_id    ?? '',
+      sha_number:     patient.sha_number     ?? '',
     })
     setFormError('')
     setShowEdit(true)
@@ -153,6 +176,11 @@ export default function PatientDetail() {
           </div>
         </div>
         <div className="flex gap-2 shrink-0">
+          {canExport && (
+            <button onClick={handleExport} disabled={exporting} className="btn-secondary text-sm disabled:opacity-50">
+              {exporting ? 'Exporting…' : 'Export data'}
+            </button>
+          )}
           <button onClick={openEdit} className="btn-secondary text-sm">
             Edit info
           </button>
@@ -167,6 +195,8 @@ export default function PatientDetail() {
         </div>
       </div>
 
+      {exportError && <p className="text-sm text-red-600 mb-4">{exportError}</p>}
+
       {/* Stats row */}
       <div className="grid grid-cols-3 gap-4 mb-6">
         <StatPill label="Total appointments" value={appointments.length} />
@@ -180,6 +210,7 @@ export default function PatientDetail() {
           { key: 'overview',     label: 'Overview' },
           { key: 'appointments', label: `Appointments (${appointments.length})` },
           { key: 'records',      label: `Medical Records (${records.length})` },
+          { key: 'consent',      label: 'Consent' },
         ].map(({ key, label }) => (
           <button
             key={key}
@@ -206,6 +237,8 @@ export default function PatientDetail() {
             <SectionRow label="Phone"         value={patient.contact_number ?? '—'} />
             <SectionRow label="Email"         value={patient.email       ?? '—'} />
             <SectionRow label="Address"       value={patient.address     ?? '—'} />
+            <SectionRow label="National ID"   value={patient.national_id ?? '—'} />
+            <SectionRow label="SHA number"    value={patient.sha_number  ?? '—'} />
             <SectionRow label="Registered"    value={patient.created_at?.slice(0, 10) ?? '—'} />
           </div>
 
@@ -264,6 +297,11 @@ export default function PatientDetail() {
             records.map((r) => <RecordRow key={r.record_id ?? r.id} record={r} expanded />)
           )}
         </div>
+      )}
+
+      {/* Tab: Consent */}
+      {tab === 'consent' && (
+        <ConsentPanel patientId={id} canCreate={canCreateConsent} canWithdraw={canWithdrawConsent} />
       )}
 
       {/* Delete confirmation modal */}
@@ -332,6 +370,16 @@ export default function PatientDetail() {
             <div>
               <label className="form-label">Address</label>
               <input className="form-input" value={form.address} onChange={f('address')} />
+            </div>
+            <div className="grid grid-cols-2 gap-4">
+              <div>
+                <label className="form-label">National ID</label>
+                <input className="form-input" value={form.national_id} onChange={f('national_id')} />
+              </div>
+              <div>
+                <label className="form-label">SHA number</label>
+                <input className="form-input" value={form.sha_number} onChange={f('sha_number')} />
+              </div>
             </div>
             {formError && (
               <p className="text-sm text-red-600 bg-red-50 border border-red-200 rounded px-3 py-2">{formError}</p>

@@ -19,6 +19,7 @@ const PERMISSIONS = {
     admissions:          ['create', 'read', 'update', 'delete'],
     discharges:          ['create', 'read', 'update', 'delete'],
     users:               ['create', 'read', 'update', 'delete'],
+    consent_records:     ['create', 'read', 'update'],
   },
   doctor: {
     patients:        ['create', 'read', 'update'],
@@ -29,6 +30,7 @@ const PERMISSIONS = {
     prescriptions:   ['create', 'read', 'update'],
     admissions:      ['create', 'read', 'update'],
     discharges:      ['create', 'read'],
+    consent_records: ['create', 'read'],
   },
   nurse: {
     patients:        ['read'],
@@ -36,10 +38,12 @@ const PERMISSIONS = {
     medical_records: ['read'],
     lab_results:     ['read'],
     admissions:      ['read', 'update'],
+    consent_records: ['read'],
   },
   receptionist: {
-    patients:     ['create', 'read', 'update'],
-    appointments: ['create', 'read', 'update'],
+    patients:        ['create', 'read', 'update'],
+    appointments:    ['create', 'read', 'update'],
+    consent_records: ['create', 'read', 'update'],
   },
   pharmacist: {
     prescriptions:       ['read', 'update'],
@@ -56,6 +60,8 @@ const PERMISSIONS = {
     medical_records: ['read:own'],
     lab_results:     ['read:own'],
     prescriptions:   ['read:own'],
+    consent_records: ['create:own', 'read:own', 'update:own'],
+    patients:        ['read:own'], // Subject Access Request export
   },
 };
 

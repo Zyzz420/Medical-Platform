@@ -1,6 +1,9 @@
 import { useState, useEffect } from 'react'
 import { useAuth } from '../contexts/AuthContext'
 import { getMyLabResults } from '../api/labResults'
+import { exportPatientData } from '../api/patients'
+import ConsentPanel from '../components/ConsentPanel'
+import { downloadJSON } from '../utils/download'
 
 const BLOOD_TYPES = ['A+', 'A-', 'B+', 'B-', 'AB+', 'AB-', 'O+', 'O-']
 const GENDERS = ['Male', 'Female', 'Other']
@@ -26,6 +29,22 @@ export default function MyProfile() {
   const [labLoading, setLabLoading]     = useState(false)
   const [labError, setLabError]         = useState('')
 
+  const [exporting, setExporting]       = useState(false)
+  const [exportError, setExportError]   = useState('')
+
+  async function handleExport() {
+    setExporting(true)
+    setExportError('')
+    try {
+      const res = await exportPatientData(p.patient_id)
+      downloadJSON(res.data, `my-data-export-${res.data.generated_at.slice(0, 10)}.json`)
+    } catch (err) {
+      setExportError(err.response?.data?.message ?? 'Failed to export your data.')
+    } finally {
+      setExporting(false)
+    }
+  }
+
   useEffect(() => {
     if (tab === 'labs') {
       setLabLoading(true)
@@ -45,6 +64,8 @@ export default function MyProfile() {
       blood_type:     p?.blood_type     ?? '',
       contact_number: p?.contact_number ?? '',
       address:        p?.address        ?? '',
+      national_id:    p?.national_id    ?? '',
+      sha_number:     p?.sha_number      ?? '',
     })
     setError('')
     setSuccess(false)
@@ -87,16 +108,24 @@ export default function MyProfile() {
     <div className="max-w-2xl">
       <div className="flex items-center justify-between mb-6">
         <h1 className="text-2xl font-bold text-gray-900">My Profile</h1>
-        {tab === 'profile' && !editing && (
-          <button onClick={startEdit} className="btn-secondary">Edit details</button>
-        )}
+        <div className="flex gap-2">
+          <button onClick={handleExport} disabled={exporting} className="btn-secondary disabled:opacity-50">
+            {exporting ? 'Exporting…' : 'Export my data'}
+          </button>
+          {tab === 'profile' && !editing && (
+            <button onClick={startEdit} className="btn-secondary">Edit details</button>
+          )}
+        </div>
       </div>
+
+      {exportError && <p className="text-sm text-red-600 mb-4">{exportError}</p>}
 
       {/* Tabs */}
       <div className="flex gap-1 mb-6 border-b border-gray-200">
         {[
           { key: 'profile', label: 'Profile' },
           { key: 'labs',    label: 'Lab Results' },
+          { key: 'consent', label: 'Consent' },
         ].map(({ key, label }) => (
           <button
             key={key}
@@ -151,6 +180,10 @@ export default function MyProfile() {
         </div>
       )}
 
+      {tab === 'consent' && (
+        <ConsentPanel patientId={p.patient_id} canCreate canWithdraw />
+      )}
+
       {tab === 'profile' && success && !editing && (
         <p className="text-sm text-green-700 bg-green-50 border border-green-200 rounded-md px-3 py-2 mb-4">
           Profile updated successfully.
@@ -166,6 +199,8 @@ export default function MyProfile() {
           <Section label="Phone"         value={p.contact_number ?? '—'} />
           <Section label="Email"         value={user.email} />
           <Section label="Address"       value={p.address ?? '—'} />
+          <Section label="National ID"   value={p.national_id ?? '—'} />
+          <Section label="SHA number"    value={p.sha_number ?? '—'} />
         </div>
       ) : tab === 'profile' ? (
         <div className="card p-6">
@@ -212,6 +247,17 @@ export default function MyProfile() {
             <div>
               <label className="form-label">Address</label>
               <input className="form-input" value={form.address} onChange={f('address')} />
+            </div>
+
+            <div className="grid grid-cols-2 gap-4">
+              <div>
+                <label className="form-label">National ID</label>
+                <input className="form-input" value={form.national_id} onChange={f('national_id')} />
+              </div>
+              <div>
+                <label className="form-label">SHA number</label>
+                <input className="form-input" value={form.sha_number} onChange={f('sha_number')} />
+              </div>
             </div>
 
             {error && (

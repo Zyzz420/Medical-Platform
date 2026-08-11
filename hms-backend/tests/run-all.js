@@ -13,6 +13,7 @@
  *   [DISCHARGE]  Validation & side effects (bed freed, duplicate → 409)
  *   [DISPENSING] Stock reconciliation on update & delete
  *   [INPATIENT]  Atomic bed transfer & input validation
+ *   [FHIR]       Read API — auth & resource mapping
  */
 
 require('dotenv').config();
@@ -25,6 +26,7 @@ const testAuth       = require('./auth.test');
 const testDischarge  = require('./discharge.test');
 const testDispensing = require('./dispensing.test');
 const testInpatient  = require('./inpatient.test');
+const testFhir       = require('./fhir.test');
 
 // ── start the server ────────────────────────────────────────────────────────
 
@@ -74,6 +76,7 @@ async function main() {
     await testDischarge(BASE, adminUserId);
     await testDispensing(BASE, adminUserId);
     await testInpatient(BASE, adminUserId);
+    await testFhir(BASE, adminUserId);
   } catch (err) {
     console.error('\nTest suite crashed:', err.message);
     process.exit(1);

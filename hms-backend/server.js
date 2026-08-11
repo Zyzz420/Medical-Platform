@@ -21,6 +21,8 @@ const dispensingRoutes    = require('./routes/dispensingRoutes');
 const drugInventoryRoutes = require('./routes/drugInventoryRoutes');
 const admissionRoutes     = require('./routes/admissionRoutes');
 const dischargeRoutes     = require('./routes/dischargeRoutes');
+const consentRoutes       = require('./routes/consentRoutes');
+const fhirRoutes          = require('./routes/fhirRoutes');
 const errorHandler        = require('./middleware/errorHandler');
 
 const pool = require('./config/db');
@@ -72,6 +74,8 @@ app.use('/api/pharmacy-dispensing', dispensingRoutes);
 app.use('/api/drug-inventory',      drugInventoryRoutes);
 app.use('/api/admissions',          admissionRoutes);
 app.use('/api/discharges',          dischargeRoutes);
+app.use('/api/consent',             consentRoutes);
+app.use('/fhir',                    fhirRoutes);
 
 app.use(errorHandler);
 

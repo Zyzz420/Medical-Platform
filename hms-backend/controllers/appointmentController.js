@@ -40,6 +40,7 @@ const getAppointmentById = async (req, res, next) => {
     if (req.user.role === 'patient' && rows[0].patient_id !== req.user.patientId) {
       return res.status(403).json({ message: 'Access denied' });
     }
+    logAudit(req, 'READ', 'appointments', rows[0].appointment_id);
     res.json(rows[0]);
   } catch (err) {
     next(err);

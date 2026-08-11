@@ -16,6 +16,9 @@ CREATE TABLE patients (
     contact_number VARCHAR(20),
     email          VARCHAR(255) UNIQUE,
     address        TEXT,
+    national_id    VARCHAR(20),
+    sha_number     VARCHAR(30),  -- SHA beneficiary number, used for claims/service verification
+    deleted_at     TIMESTAMP,
     created_at     TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     updated_at     TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
@@ -199,6 +202,20 @@ CREATE TABLE deleted_records (
 );
 
 -- ============================================================
+-- PHASE 7: SHA/DHA Compliance (Data Protection Act consent)
+-- ============================================================
+
+CREATE TABLE consent_records (
+    id           SERIAL PRIMARY KEY,
+    patient_id   INT NOT NULL REFERENCES patients(patient_id) ON DELETE CASCADE,
+    consent_type VARCHAR(50) NOT NULL,   -- TREATMENT | DATA_PROCESSING | RESEARCH
+    version      VARCHAR(20) NOT NULL DEFAULT '1.0',
+    recorded_by  INT REFERENCES users(user_id) ON DELETE SET NULL,
+    created_at   TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    withdrawn_at TIMESTAMP
+);
+
+-- ============================================================
 -- INDEXES
 -- ============================================================
 
@@ -220,6 +237,8 @@ CREATE INDEX idx_audit_log_resource         ON audit_log(resource, resource_id);
 CREATE INDEX idx_audit_log_created_at       ON audit_log(created_at DESC);
 CREATE INDEX idx_deleted_records_table      ON deleted_records(table_name, record_id);
 CREATE INDEX idx_users_email                ON users(email);
+CREATE INDEX idx_patients_sha_number        ON patients(sha_number) WHERE sha_number IS NOT NULL;
+CREATE INDEX idx_consent_records_patient_id ON consent_records(patient_id);
 CREATE INDEX idx_users_patient_id           ON users(patient_id);
 CREATE INDEX idx_drug_inventory_name        ON drug_inventory(medication_name);
 

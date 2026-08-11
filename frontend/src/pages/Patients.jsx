@@ -12,6 +12,7 @@ const GENDERS = ['Male', 'Female', 'Other']
 const EMPTY_FORM = {
   first_name: '', last_name: '', date_of_birth: '', gender: '',
   blood_type: '', contact_number: '', email: '', address: '',
+  national_id: '', sha_number: '',
   // optional login account
   create_account: false,
   account_password: '',
@@ -105,6 +106,8 @@ export default function Patients() {
           blood_type:     form.blood_type     || undefined,
           contact_number: form.contact_number || undefined,
           address:        form.address        || undefined,
+          national_id:    form.national_id    || undefined,
+          sha_number:     form.sha_number     || undefined,
         })
         // The register response includes the user; derive a patients-like row for the table
         const { user: newUser } = res.data
@@ -119,6 +122,8 @@ export default function Patients() {
             contact_number: form.contact_number || null,
             email:          form.email,
             address:        form.address || null,
+            national_id:    form.national_id || null,
+            sha_number:     form.sha_number || null,
           },
           ...prev,
         ])
@@ -133,6 +138,8 @@ export default function Patients() {
           contact_number: form.contact_number || null,
           email:          form.email          || null,
           address:        form.address        || null,
+          national_id:    form.national_id    || null,
+          sha_number:     form.sha_number     || null,
         })
         setPatients((prev) => [res.data, ...prev])
       }
@@ -286,6 +293,17 @@ export default function Patients() {
           <div>
             <label className="form-label">Address</label>
             <input className="form-input" value={form.address} onChange={f('address')} />
+          </div>
+
+          <div className="grid grid-cols-2 gap-4">
+            <div>
+              <label className="form-label">National ID</label>
+              <input className="form-input" value={form.national_id} onChange={f('national_id')} />
+            </div>
+            <div>
+              <label className="form-label">SHA number</label>
+              <input className="form-input" value={form.sha_number} onChange={f('sha_number')} />
+            </div>
           </div>
 
           {/* Optional account creation */}

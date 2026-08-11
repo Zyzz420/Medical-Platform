@@ -24,7 +24,7 @@ async function fetchPatientProfile(client, patient_id) {
   if (!patient_id) return null;
   const { rows } = await client.query(
     `SELECT patient_id, first_name, last_name, date_of_birth, gender,
-            blood_type, contact_number, email, address
+            blood_type, contact_number, email, address, national_id, sha_number
      FROM patients WHERE patient_id = $1`,
     [patient_id]
   );
@@ -37,6 +37,7 @@ const register = async (req, res, next) => {
     email, password, role,
     doctor_id, patient_id,
     first_name, last_name, date_of_birth, gender, blood_type, contact_number, address,
+    national_id, sha_number,
   } = req.body;
 
   if (!email || !password || !role) {
@@ -70,11 +71,12 @@ const register = async (req, res, next) => {
       await client.query('BEGIN');
 
       const patientRes = await client.query(
-        `INSERT INTO patients (first_name, last_name, date_of_birth, gender, blood_type, contact_number, email, address)
-         VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
+        `INSERT INTO patients (first_name, last_name, date_of_birth, gender, blood_type, contact_number, email, address, national_id, sha_number)
+         VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)
          RETURNING patient_id`,
         [first_name, last_name, date_of_birth,
-         gender || null, blood_type || null, contact_number || null, email, address || null]
+         gender || null, blood_type || null, contact_number || null, email, address || null,
+         national_id || null, sha_number || null]
       );
       const newPatientId = patientRes.rows[0].patient_id;
 
@@ -186,7 +188,7 @@ const getMe = async (req, res, next) => {
 
 // PUT /api/auth/profile
 const updateProfile = async (req, res, next) => {
-  const { first_name, last_name, date_of_birth, gender, blood_type, contact_number, address } = req.body;
+  const { first_name, last_name, date_of_birth, gender, blood_type, contact_number, address, national_id, sha_number } = req.body;
 
   try {
     const { rows: userRows } = await pool.query(
@@ -206,11 +208,14 @@ const updateProfile = async (req, res, next) => {
            gender        = COALESCE($4, gender),
            blood_type    = COALESCE($5, blood_type),
            contact_number = COALESCE($6, contact_number),
-           address       = COALESCE($7, address)
-       WHERE patient_id = $8
-       RETURNING patient_id, first_name, last_name, date_of_birth, gender, blood_type, contact_number, email, address`,
+           address       = COALESCE($7, address),
+           national_id   = COALESCE($8, national_id),
+           sha_number    = COALESCE($9, sha_number)
+       WHERE patient_id = $10
+       RETURNING patient_id, first_name, last_name, date_of_birth, gender, blood_type, contact_number, email, address, national_id, sha_number`,
       [first_name ?? null, last_name ?? null, date_of_birth ?? null,
        gender ?? null, blood_type ?? null, contact_number ?? null, address ?? null,
+       national_id ?? null, sha_number ?? null,
        patient_id]
     );
     res.json(rows[0]);
