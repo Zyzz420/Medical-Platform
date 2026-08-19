@@ -173,4 +173,39 @@ const exportPatientData = async (req, res, next) => {
   }
 };
 
-module.exports = { getAllPatients, getPatientById, createPatient, updatePatient, deletePatient, exportPatientData };
+// Retention review (DPA 2019 / COMPLIANCE_REQUIREMENTS.md §2): flags patients
+// past the confirmed 6-year retention period for DPO/admin review. This is
+// identification only — it never deletes or archives on its own. Who may
+// actually trigger a purge (§2.6) and how deceased-patient/minor records
+// change the clock (§2.3-2.4) are still open policy questions, so those are
+// left for a human decision rather than assumed here.
+const RETENTION_YEARS = 6;
+
+const getRetentionReview = async (req, res, next) => {
+  try {
+    const { rows } = await pool.query(
+      `SELECT p.patient_id, p.first_name, p.last_name, p.deleted_at,
+              GREATEST(p.deleted_at, la.last_activity, p.created_at) AS retention_anchor,
+              (p.deleted_at IS NOT NULL) AS already_deactivated
+       FROM patients p
+       LEFT JOIN LATERAL (
+         SELECT MAX(a.appointment_datetime) AS last_activity
+         FROM appointments a
+         WHERE a.patient_id = p.patient_id
+       ) la ON true
+       WHERE GREATEST(p.deleted_at, la.last_activity, p.created_at) < NOW() - INTERVAL '${RETENTION_YEARS} years'
+       ORDER BY retention_anchor ASC`
+    );
+    res.json({
+      retention_years: RETENTION_YEARS,
+      anchor_basis: 'last appointment, or deactivation date, or registration date if neither exists',
+      note: 'Identification only. Confirm deceased/minor handling (COMPLIANCE_REQUIREMENTS.md §2.3-2.4) and purge authorization (§2.6) before acting on this list.',
+      count: rows.length,
+      patients: rows,
+    });
+  } catch (err) {
+    next(err);
+  }
+};
+
+module.exports = { getAllPatients, getPatientById, createPatient, updatePatient, deletePatient, exportPatientData, getRetentionReview };

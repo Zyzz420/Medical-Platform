@@ -22,10 +22,16 @@ const {
 // placeholder (existing JWT + admin-only) — TODO: replace with the actual
 // SHA/DHA auth scheme (likely OAuth2 client-credentials / SMART on FHIR
 // backend services) once that spec is available. See the FHIR scoping plan.
+
+// CapabilityStatement is left unauthenticated: it's the entry point DHA's
+// conformance-testing tooling (and any FHIR client) hits first to discover
+// what the server supports, before it has credentials. It exposes no
+// patient data, only the shape of the API.
+router.get('/metadata', getCapabilityStatement);
+
 router.use(authenticate);
 router.use(authorize('admin'));
 
-router.get('/metadata', getCapabilityStatement);
 router.get('/Organization', getOrganization);
 
 router.get('/Patient', searchPatients);

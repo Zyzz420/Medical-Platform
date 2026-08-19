@@ -114,13 +114,19 @@ module.exports = async function testFhir(BASE, adminUserId) {
     }
 
     // ── auth ────────────────────────────────────────────────────────────────
-    const { status: sNoAuth } = await req('GET', '/fhir/metadata', {}, BASE);
+    // CapabilityStatement is deliberately unauthenticated (conformance-testing
+    // tools discover the API before they have credentials); every other FHIR
+    // resource stays behind admin auth, so the auth check moved to Organization.
+    const { status: sNoAuth } = await req('GET', '/fhir/Organization', {}, BASE);
     assert('No token → 401', sNoAuth === 401, `got ${sNoAuth}`);
 
-    const { status: sNonAdmin } = await req('GET', '/fhir/metadata', { token: nurseToken }, BASE);
+    const { status: sNonAdmin } = await req('GET', '/fhir/Organization', { token: nurseToken }, BASE);
     assert('Non-admin token → 403', sNonAdmin === 403, `got ${sNonAdmin}`);
 
     // ── CapabilityStatement ────────────────────────────────────────────────
+    const { status: sMetaNoAuth } = await req('GET', '/fhir/metadata', {}, BASE);
+    assert('metadata reachable without auth → 200', sMetaNoAuth === 200, `got ${sMetaNoAuth}`);
+
     const { status: sMeta, json: jMeta } = await req('GET', '/fhir/metadata', { token: adminToken }, BASE);
     assert('metadata → 200', sMeta === 200, `got ${sMeta}`);
     assert('metadata resourceType', jMeta?.resourceType === 'CapabilityStatement', `got ${jMeta?.resourceType}`);
